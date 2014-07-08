@@ -46,17 +46,23 @@ testlines = icd9_raw.readlines(50)
 import re
 
 #prepare regular expression searches 
-level1 = re.compile(r"[0-9][0-9][0-9]\.[0-9]*")
+level1 = re.compile(r"E?[0-9][0-9][0-9]\.[0-9]*")
 level2 = re.compile(r"[0-9][0-9[0-9]\s+")
-#level3 = re.compile(r"[IVX]\.")
+level3 = re.compile(r"[IVX]\.")
 
 # prepare 'holder' strings for upper levels to place in the list
 L2 = ''
 L3 = ''
 
-for line in testlines:
-    if level2.search(line):
+for line in icd9_raw:
+    if level3.search(line):
+        L3 = line.strip()
+        chapter.append(L3)
+    
+    elif level2.search(line):
         level2_split = re.split(r" ", line.strip(), 1)
+        #concatenate list with chapter in front of disease category
+        level2_split.insert(0,L3)
         L2 = level2_split
         category.append(level2_split)
 
@@ -67,8 +73,8 @@ for line in testlines:
         level1_split.insert(0,L2) 
         disease.append(level1_split)
 
-    else:
-        print "No Match:" + line.strip()
+ #   else:
+ #       print "No Match:" + line.strip()
 
 icd9_raw.close()
 
