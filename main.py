@@ -23,6 +23,7 @@ I am leaving them aside for the time-being.
 TASKS
 A-prepare concatenated 3-level list for ICD-9
 B-read .txt file line-by-line and drop the information to the appropriate list
+C- wirte to .csv file for use in SAS analysis
 
 """  
 
@@ -79,3 +80,9 @@ for line in icd9_raw:
 icd9_raw.close()
 
 #<#
+
+#2C write to .csv file>
+
+
+#<#
+
