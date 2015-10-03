@@ -26,7 +26,7 @@ print str(locals()['__doc__'])
 
 
 #dependancies
-import re,os, time sqlite3 as dbapi
+import re,os, time, sqlite3 as dbapi
 from ftplib import FTP
 from StringIO import StringIO
 
@@ -108,45 +108,49 @@ chapter = []
 
 
 #2B> read .txt file line-by-line and drop in the appropriate list
-icd9_raw = open(os.path.join(local9,'ucod.txt'),"r")
-
-    
-testlines = icd9_raw.readlines(50)
-
 
 #prepare regular expression searches 
 level1 = re.compile(r"E?[0-9][0-9][0-9]\.[0-9]*")
-level2 = re.compile(r"[0-9][0-9[0-9]\s+")
+level2 = re.compile(r"^\s*?[0-9][0-9][0-9]\s+")
 level3 = re.compile(r"[IVX]\.")
 
 # prepare 'holder' strings for upper levels to place in the list
 L1 = ''
 L2 = ''
 L3 = ''
+l=0
 
-for line in icd9_raw:
-    print(line)
-    time.sleep(2)
-    if level3.search(line):
-        L3 = line.strip()
-        chapter.append(L3)
+with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
+    next(icd9_raw)
+    for line in icd9_raw:
+        #print(line)
+        #time.sleep(2)
+        if level3.search(line):
+            L3 = line.strip()
+            chapter.append(L3)
+            l=3
     
-    elif level2.search(line):
-        level2_split = re.split(r" ", line.strip(), 1)
-        #concatenate list with chapter in front of disease category
-        level2_split.insert(0,L3)
-        L2 = level2_split
-        category.append(L2)
+        elif level2.search(line):
+            level2_split = re.split(r" ", line.strip(), 1)
+            #concatenate list with chapter in front of disease category
+            level2_split.insert(0,L3)
+            L2 = level2_split
+            category.append(L2)
+            l=2
+    
+        #match ensures it is matches at the beginning of the string
+        elif level1.match(line): 
+            level1_split = re.split(r" ", line.strip(), 1)
+            #concatenate list with level in front of disease
+            if type(L2) is list:
+                disease.append(L2+level1_split)
+            l=1
+            
 
-    #match ensures it is matches at the beginning of the string
-    elif level1.match(line): 
-        level1_split = re.split(r" ", line.strip(), 1)
-        #concatenate list with level in front of disease
-        if type(L2) is list:
-            disease.append(L2+level1_split)
-
-#    else:
-#       print "No Match:" + line.strip()
+#could use non-matches to collect notes
+#        else:
+#            print "No Match: Level" + str(l) + '\n' + line.strip()
+#            time.sleep(2)
 
 icd9_raw.close()
 
@@ -155,9 +159,11 @@ icd9_raw.close()
 #2C write to .csv file>
 import csv
 
+disease9 = [[s.strip() for s in inner] for inner in disease]
+
 with open(os.path.join(dirs['outdir'],'icd9.csv'), "wb") as f:
     writer = csv.writer(f)
-    writer.writerows(disease)
+    writer.writerows(disease9)
 
 #%%
 
