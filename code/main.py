@@ -9,11 +9,6 @@ chapter = Level 3 is the "chapter" heading beginnin with a roman numberal and in
 
 NOTE that there are additoinal levels between 2 and 3 in the file, and separate levels built in ohter programs.
 I am leaving them aside for the time-being.
-
-TASKS
-A-prepare concatenated 3-level list for ICD-9
-B-read .txt file line-by-line and drop the information to the appropriate list
-C- write to .csv file for processing in R
 '''  
 
 
@@ -98,16 +93,13 @@ myftp.quit()
 #Parse ICD9 into useable lists
 #@@@@@@@@@@@@@@@@@@@@@@@
 
-#2A> Prepare concatenated 3-level list to contain ICD-9
+#Prepare concatenated 3-level list to contain ICD-9
 
-disease = [] #make an object??#
-category = [] # make a set??#
+disease = [] 
+category = [] 
 chapter = []
 
-#<#
-
-
-#2B> read .txt file line-by-line and drop in the appropriate list
+#read .txt file line-by-line and drop in the appropriate list
 
 #prepare regular expression searches 
 level1 = re.compile(r"E?[0-9][0-9][0-9]\.[0-9]*")
@@ -156,7 +148,7 @@ icd9_raw.close()
 
 #%%
 
-#2C write to .csv file>
+#write to .csv file>
 import csv
 
 disease9 = [[s.strip() for s in inner] for inner in disease]
@@ -167,3 +159,60 @@ with open(os.path.join(dirs['outdir'],'icd9.csv'), "wb") as f:
 
 #%%
 
+#%%
+#@@@@@@@@@@@@@@@@@@@@@@@
+#Parse ICD10 into useable lists
+#@@@@@@@@@@@@@@@@@@@@@@@
+
+status = []
+disease = [] 
+category = [] 
+chapter = []
+
+#read .txt file line-by-line and drop in the appropriate list
+
+#prepare regular expression searches 
+statnote = re.compile(r"\t")
+level1 = re.compile(r"[A-Z][0-9][0-9]\.[0-9]*")
+level2 = re.compile(r"[A-Z][0-9][0-9]-[A-Z][0-9][0-9]")
+level3 = re.compile(r"[IVX]\.")
+
+# prepare 'holder' strings for upper levels to place in the list
+L1 = ''
+L2 = ''
+L3 = ''
+l=0
+
+with open(os.path.join(local10,'allvalid2011 (detailed titles headings).txt'),"r") as icd10_raw:
+    for _ in xrange(7):
+        next(icd10_raw)
+    for line in icd10_raw:
+         if statnote.match(line):
+             n=line
+         else:
+             print repr(line)
+             #time.sleep(1)
+             
+         if level3.search(line):
+            L3 = line.strip()
+            chapter.append(L3)
+            l=3
+    
+         elif level2.search(line):
+            level2_split = re.split(r"\t", line.strip(), 1)
+            #concatenate list with chapter in front of disease category
+            level2_split.insert(0,L3)
+            L2 = level2_split
+            category.append(L2)
+            l=2
+    
+         #match ensures it is matches at the beginning of the string
+         elif level1.search(line): 
+            level1_split = re.split(r"\t", line.strip(), 1)
+            #concatenate list with level in front of disease
+            if type(L2) is list:
+               disease.append(L2+level1_split)
+            l=1
+
+
+icd10_raw.close()
