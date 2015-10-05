@@ -235,13 +235,14 @@ with open(os.path.join(local10,'allvalid2011 (detailed titles headings).txt'),"r
             l=2
     
          #match ensures it is matches at the beginning of the string
+         #NOTE that this only parses codes of length four (A00.0) and not
+         #the larger 3 length divisions (A00)---the parser skips those lines
          elif level1.search(line): 
             level1_split = re.split(r"\t", line.strip(), 1)
             #concatenate list with level in front of disease
             if type(L2) is list:
                disease.append(L2+level1_split+[added,deleted,MC_only])
             l=1
-
 
 icd10_raw.close()
 
