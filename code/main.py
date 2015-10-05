@@ -21,9 +21,8 @@ print str(locals()['__doc__'])
 
 
 #dependancies
-import re,os, time, sqlite3 as dbapi
+import re, os, csv
 from ftplib import FTP
-from StringIO import StringIO
 
 #global variables
 
@@ -149,15 +148,12 @@ icd9_raw.close()
 #%%
 
 #write to .csv file>
-import csv
-
 disease9 = [[s.strip() for s in inner] for inner in disease]
 
 with open(os.path.join(dirs['outdir'],'icd9.csv'), "wb") as f:
     writer = csv.writer(f)
+    writer.writerow(['chapter','div_no','div_name','code','descrip'])
     writer.writerows(disease9)
-
-#%%
 
 #%%
 #@@@@@@@@@@@@@@@@@@@@@@@
@@ -188,11 +184,43 @@ with open(os.path.join(local10,'allvalid2011 (detailed titles headings).txt'),"r
         next(icd10_raw)
     for line in icd10_raw:
          if statnote.match(line):
-             n=line
+             #standard variables
+             added=1999
+             deleted=0
+             MC_only=0
          else:
-             print repr(line)
-             #time.sleep(1)
+             #pop the front off for further processing
+             pre = re.split(r"\t",line.strip(),1)[0]
+             line = re.split(r"\t",line.strip(),1)[1]
+             #print(pre)
+             #time.sleep(.1)
+
              
+             if re.match(r"Added ",pre):
+                 #print(pre)
+                 m=re.search(r"[0-9][0-9][0-9][0-9]",pre)
+                 added=pre[m.start():m.end()]
+                 deleted=0
+                 MC_only=0
+                 
+             elif re.match(r"Deleted ",pre):
+                 #print(pre)
+                 m=re.search(r"[0-9][0-9][0-9][0-9]",pre)
+                 deleted=pre[m.start():m.end()]
+                 added=1999
+                 MC_only=0
+                 #print(deleted)
+
+             elif re.match(r"MC ONLY",pre):
+                 #print(pre)
+                 added=1999
+                 deleted=0
+                 MC_only=1
+                 #print(MC_only)
+                 
+         #if MC_only == 1:
+         #    print([added,deleted,MC_only])
+
          if level3.search(line):
             L3 = line.strip()
             chapter.append(L3)
@@ -211,8 +239,19 @@ with open(os.path.join(local10,'allvalid2011 (detailed titles headings).txt'),"r
             level1_split = re.split(r"\t", line.strip(), 1)
             #concatenate list with level in front of disease
             if type(L2) is list:
-               disease.append(L2+level1_split)
+               disease.append(L2+level1_split+[added,deleted,MC_only])
             l=1
 
 
 icd10_raw.close()
+
+#%%
+
+#write to .csv file>
+
+with open(os.path.join(dirs['outdir'],'icd10.csv'), "wb") as f:
+    writer = csv.writer(f)
+    writer.writerow(['chapter','div_nos','div_name','code','descrip','year_add','year_del','mc_only'])
+    writer.writerows(disease)
+
+#%%
