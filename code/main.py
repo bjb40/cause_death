@@ -196,12 +196,29 @@ for l in range(1,114):
     ti = stript(np.array_str(nchs113ti[np.where(nchs113ti[:,0] ==str(l)),1]))
     l10 = stript(np.array_str(icd10map[np.where(icd10map[:,0] == str(l)),1]))
     l9 = stript(np.array_str(icd9map[np.where(icd9map[:,0] == str(l)),1]))
-    #gbd based on code 
-    #print([l,ti,l10,l9,'a'])
-    #time.sleep(.1)
-    nchsmap.append([l,ti,l9,l10,'gbd'])
+    cat = ''
     
+    if (l <= 17) or (l>=44 and l<=46) or (l>=66 and l <=69) or (l>=90 and l <=94):
+        cat = 'Acute'
+    elif (l>=18 and l<=43) or (l>=47 and l <=65) or (l>=70 and l<=89):
+        cat= 'Chronic'
+    elif l == 95:
+        cat = 'Residual'
+    elif l>=96:
+        cat = 'External'
 
+    nchsmap.append([l,ti,l9,l10,cat])
+
+
+#%%
+
+#write to .csv file>
+
+with open(os.path.join(dirs['outdir'],'nchs113map.csv'), "wb") as f:
+    writer = csv.writer(f)
+    writer.writerow(['nchsid','title','icd9map','icd10map','category'])
+    writer.writerows(nchsmap)
+    
 #%%
 
 #@@@@@@@@@@@@@@@@@@@@@@@
@@ -257,18 +274,40 @@ with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
 #could use non-matches to collect notes
 #        else:
 #            print "No Match: Level" + str(l) + '\n' + line.strip()
-#            time.sleep(2)
+#            time.sleep(.1)
 
 icd9_raw.close()
 
 #%%
 
+#item finder http://stackoverflow.com/questions/15886751/python-get-index-from-list-of-lists
+def findItem(theList, item):
+   return [(ind, theList[ind].index(item)) for ind in xrange(len(theList)) if item in theList[ind]]
+
+#merge with information from NCHS 113
+
+for c in range(0,113):
+    nchscod = nchsmap[c][0:2]
+    nchscod.append(nchsmap[c][4])
+    cod = nchsmap[c][2].split(r' ')
+    print("Merging nchs no. %s: %s \n\t%s disease class" % (nchscod[0],nchscod[1],nchscod[2]))
+    time.sleep(.1)
+
+    for i in cod:
+        if len(i) == 3:
+            idex = findItem(disease,i)
+            for d in idex:
+                disease[d[0]] += nchscod
+
+
+#%%
+
 #write to .csv file>
-disease9 = [[s.strip() for s in inner] for inner in disease]
+disease9 = [[str(s).replace('\\t','').strip() for s in inner] for inner in disease]
 
 with open(os.path.join(dirs['outdir'],'icd9.csv'), "wb") as f:
     writer = csv.writer(f)
-    writer.writerow(['chapter','div_no','div_name','code','descrip'])
+    writer.writerow(['chapter','div_no','div_name','code','descrip','nchs113','nchsti','type'])
     writer.writerows(disease9)
 
 #%%
@@ -311,7 +350,6 @@ with open(os.path.join(local10,'allvalid2011 (detailed titles headings).txt'),"r
              line = re.split(r"\t",line.strip(),1)[1]
              #print(pre)
              #time.sleep(.1)
-
              
              if re.match(r"Added ",pre):
                  #print(pre)
