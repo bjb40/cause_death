@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 '''
-OVERVIEW
-Read this text file organized as 3 level hierarchical lists.
-DISEASE = The bottom, fundamental level is the single disease category: ###.[#],
-  where [] indicates an open set of numbers.
-CATEGORY = Level 2 is the heading to the initial 3 digits, ###
-chapter = Level 3 is the "chapter" heading beginnin with a roman numberal and in all caps
+This script downloads raw text files related to multiple cause mortality, and 
+parses them into .csv files.
 
-NOTE that there are additoinal levels between 2 and 3 in the file, and separate levels built in ohter programs.
-I am leaving them aside for the time-being.
+global variables of importance include assigning (1) a local raw file directory 
+(to house the downloaded raw files from CDC) and (2) a local output directory
+(to house the paresed files).
+
+The script also generates a detailed readme file to explain the contents of the 
+.csv.
 '''  
-
 
 #@@@@@@@@@@@@@@@@@@@@@@@
 #Import dependencies and assign global variables
@@ -21,7 +20,7 @@ print str(locals()['__doc__'])
 
 
 #dependancies
-import re, os, csv, time, numpy as np
+import re, os, csv, time, datetime, numpy as np
 from ftplib import FTP
 
 #global variables
@@ -31,10 +30,11 @@ dirs = {
 'icd9':'pub/Health_Statistics/NCHS/Publications/ICD-9',
 'icd10':'pub/Health_Statistics/NCHS/Publications/ICD10',
 'nchs113':'pub/Health_Statistics/NCHS/Datasets/Comparability/icd9_icd10/',
-'dat':'H:/Academic Projects/Data Files/NVSS/nosology',
-'outdir':'H:/projects/cause_death/output'
+'dat':'H:/Academic Projects/Data Files/NVSS/nosology', #local raw file directory
+'outdir':'H:/projects/cause_death/output' #local parsed file directory
 }
 
+#creating file structure for local raw data directory
 local9 = os.path.join(dirs['dat'] + '/icd9')
 local10= os.path.join(dirs['dat'] + '/icd10')
 local113 = os.path.join(dirs['dat'] + '/nchs113')
@@ -179,7 +179,7 @@ nchs113ti = np.array(nchs113ti)
 icd10map = np.array(icd10map)
 icd9map = np.array(icd9map)
 
-#%%
+
 
 #initialize empty final array
 #nchsmap = np.recarray( (113,), dtype= [('id',int),('title',str),('icd9list',str),('icd10list',str),('gbd',str)])
@@ -278,7 +278,6 @@ with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
 
 icd9_raw.close()
 
-#%%
 
 #item finder http://stackoverflow.com/questions/15886751/python-get-index-from-list-of-lists
 def findItem(theList, item):
@@ -403,11 +402,122 @@ icd10_raw.close()
 
 #%%
 
+#merge with information from NCHS 113
+
+for c in range(0,113):
+    nchscod = nchsmap[c][0:2]
+    nchscod.append(nchsmap[c][4])
+    cod = nchsmap[c][3].split(r' ')
+    print("Merging nchs no. %s: %s \n\t%s disease class" % (nchscod[0],nchscod[1],nchscod[2]))
+    time.sleep(.1)
+
+    for i in cod:
+        #correct formatting
+        if len(i) == 4:
+            i = i[0:3] + '.' + i[3]
+
+        idex = findItem(disease,i)         
+        for d in idex:
+            disease[d[0]] += nchscod
+
+
+
+#%%
+
 #write to .csv file>
 
 with open(os.path.join(dirs['outdir'],'icd10.csv'), "wb") as f:
     writer = csv.writer(f)
-    writer.writerow(['chapter','div_nos','div_name','code','descrip','four_code','year_add','year_del','mc_only'])
+    writer.writerow(['chapter','div_nos','div_name','code','descrip','four_code','year_add','year_del','mc_only','nchs113','nchsti','type'])
     writer.writerows(disease)
 
 #%%
+
+#write readme file
+
+readme = open(os.path.join(dirs['outdir'],'readme.txt'),'w')
+
+readme.write('''@@@@@@@@@@@@@@@@
+Readme automatically generated from main.py available from
+https://github.com/bjb40/cause_death
+Bryce Bartlett
+@@@@@@@@@@@@@
+
+Files identified below were downloaded from the Department of Health and Human Services
+public ftp site, %s, and parsed using python on the following date:
+ %s
+ 
+Text files parsed using Python 2.7 with numpy package. 
+ 
+@@@@@@@@@@@@@@@
+nchs113map.csv
+
+This is the result of a parsed .sas string developed by NVSS in connection with
+the 1996 comparability study. It outlines the codes related to the 113 ADULT 
+causes of death developed by NVSS at that time as a cross-walk between ICD9
+and ICD10.
+
+Source Data:\n%s 
+
+File structure:
+nchsid      Arbitrary index number 113 assigned by NCHS.
+title       Name assigned to each 113 classification by NCHS.
+icd9map     String of icd codes under icd9 assigned to specific classification.
+icd10map    String of codes under icd10 assigned to specific classification
+
+@@@@@@@@@@@@@@@
+icd9.csv
+
+This is parsed listing of all available icd9 codes specific to cause of death classifications
+in the multiple mortality files prior to 1999. It provides a listing of each
+acceptable cause of death code with associated attributes.
+
+Source Data:\n%s
+
+File Structure: 
+chapter     String reporting which of 16 of ICD9 chapters (uses Roman Numerals)
+div_no      ICD number assigned at the higher level (3 code) codification of the disease
+div_name    Assigned description of the division
+code        UNIQUE KEY: 4 code ICD number assigned to disease classification
+descrip     Official disease description
+nchs113     Index number from nchs113map.csv as assigned by nchs
+nchsti      Title of nchs index number from nchs113map.csv
+type        Broad classification of disease as "acute","chronic","external",or "residual" (author assigned)
+
+@@@@@@@@@@@@@@@
+icd10.csv
+
+This is parsed listing of all available icd10 codes specific to cause of death classifications
+in the multiple mortality files from 1999 on. It provides a listing of each
+acceptable cause of death code with associated attributes.
+
+Source Data:\n%s
+
+File Structure: 
+chapter     String reporting which of 16 of ICD9 chapters (uses Roman Numerals)
+div_nos     Span of ICD numbers assigned at the higher level (3 code) codification of the disease
+div_name    Assigned description of the division
+code        UNIQUE KEY: 3 or 4 code ICD number assigned to disease classification
+descrip     Official disease description
+four_code   Binary indicator of 3 code (A01) or 4 code (A01.1) ICD number
+year_add    The year the disease classification was first used for causes of death
+year_del    The year the disease classification was discontinued; coded 0 if still in use
+mc_only     Indicates whether code is used in multiple cause file only (1) or used more broadly (0)
+nchs113     Index number from nchs113map.csv as assigned by nchs
+nchsti      Title of nchs index number from nchs113map.csv
+type        Broad classification of disease as "acute","chronic","external",or "residual" (author assigned)
+
+
+NOTE: It appears that some disease classifications DO NOT have a 4 digit code, 
+and are only reportable using the 3 digit code.
+'''
+ % (dirs['ftp'],
+    datetime.datetime.now().strftime('%m-%d-%Y'),
+    dirs['ftp']+dirs['nchs113']+'/Classify_to_113_list.sas',
+    dirs['ftp']+dirs['icd9']+'/ucod.txt',
+    dirs['ftp']+dirs['icd10']+'/allvalid2011 (detailed titles headings).txt')
+ )
+ 
+readme.close() 
+
+
