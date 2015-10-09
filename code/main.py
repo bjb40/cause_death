@@ -235,7 +235,7 @@ chapter = []
 
 #prepare regular expression searches 
 level1 = re.compile(r"E?[0-9][0-9][0-9]\.[0-9]*")
-level2 = re.compile(r"^\s*?[0-9][0-9][0-9]\s+")
+level2 = re.compile(r"^\s*?E?[0-9][0-9][0-9]\s+")
 level3 = re.compile(r"[IVX]\.")
 
 # prepare 'holder' strings for upper levels to place in the list
@@ -243,6 +243,8 @@ L1 = ''
 L2 = ''
 L3 = ''
 l=0
+
+exchap = 'External (non-numbered) Chapter prefixed "E"'
 
 with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
     next(icd9_raw)
@@ -252,11 +254,13 @@ with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
         if level3.search(line):
             L3 = line.strip()
             chapter.append(L3)
-            l=3
-    
+         
         elif level2.search(line):
-            level2_split = re.split(r" ", line.strip(), 1)
-            #concatenate list with chapter in front of disease category
+            level2_split = re.split(r" ", line.replace('\t','').strip(), 1)
+            #special processing for "external" chapter
+            if re.search(r'E[0-9][0-9][0-9]',line):
+                L3 = exchap
+            #concatenate list with chapter in front of disease category                
             level2_split.insert(0,L3)
             L2 = level2_split
             category.append(L2)
@@ -264,7 +268,7 @@ with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
     
         #match ensures it is matches at the beginning of the string
         elif level1.match(line): 
-            level1_split = re.split(r" ", line.strip(), 1)
+            level1_split = re.split(r" ", line.replace('\t','').strip(), 1)
             #concatenate list with level in front of disease
             if type(L2) is list:
                 disease.append(L2+level1_split)
@@ -278,6 +282,7 @@ with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
 
 icd9_raw.close()
 
+#%%
 
 #item finder http://stackoverflow.com/questions/15886751/python-get-index-from-list-of-lists
 def findItem(theList, item):
@@ -293,10 +298,15 @@ for c in range(0,113):
     time.sleep(.1)
 
     for i in cod:
-        if len(i) == 3:
-            idex = findItem(disease,i)
-            for d in idex:
-                disease[d[0]] += nchscod
+        #add "E" prefix for externals - left out of SAS file
+        print(i)
+        if(i) != '' and int(i) > 7999:
+            i = 'E'+ i
+        #add the decimal
+        i=i[:-1] + '.' + i[-1:]
+        idex = findItem(disease,i)
+        for d in idex:
+            disease[d[0]] += nchscod
 
 
 #%%
@@ -400,7 +410,7 @@ with open(os.path.join(local10,'allvalid2011 (detailed titles headings).txt'),"r
 
 icd10_raw.close()
 
-#%%
+
 
 #merge with information from NCHS 113
 
