@@ -282,7 +282,7 @@ with open(os.path.join(local9,'ucod.txt'),"r") as icd9_raw:
 
 icd9_raw.close()
 
-#%%
+
 
 #item finder http://stackoverflow.com/questions/15886751/python-get-index-from-list-of-lists
 def findItem(theList, item):
@@ -299,7 +299,7 @@ for c in range(0,113):
 
     for i in cod:
         #add "E" prefix for externals - left out of SAS file
-        print(i)
+        #print(i)
         if(i) != '' and int(i) > 7999:
             i = 'E'+ i
         #add the decimal
