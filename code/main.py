@@ -319,17 +319,18 @@ with open(os.path.join(dirs['outdir'],'icd9.csv'), "wb") as f:
     writer.writerow(['chapter','div_no','div_name','code','descrip','nchs113','nchsti','type'])
     writer.writerows(disease9)
 
+del(disease)
+
 #%%
 #@@@@@@@@@@@@@@@@@@@@@@@
 #Parse ICD10 into useable lists
 #@@@@@@@@@@@@@@@@@@@@@@@
 
 status = []
-disease = [] 
+disease3 = [] #holder for 3 character disease codes (A00) 
+disease4 = [] #holder for 4 character disease codes (A00.0)
 category = [] 
 chapter = []
-
-#read .txt file line-by-line and drop in the appropriate list
 
 #prepare regular expression searches 
 statnote = re.compile(r"\t")
@@ -398,19 +399,33 @@ with open(os.path.join(local10,'allvalid2011 (detailed titles headings).txt'),"r
         
          elif level1.search(line):
              level1_split = re.split(r"\t",line.strip(),1)
-#            #concatenate list with level in front of disease
+            #concatenate list with level in front of disease
              if type(L2) is list:
-                disease.append(L2+level1_split+[int(0),added,deleted,MC_only])
+                disease3.append(L2+level1_split+[int(0),added,deleted,MC_only])
    
          elif level0.search(line): 
             level1_split = re.split(r"\t", line.strip(), 1)
-#            #concatenate list with level in front of disease
+            #concatenate list with level in front of disease
             if type(L2) is list:
-               disease.append(L2+level1_split+[int(1),added,deleted,MC_only])
+               disease4.append(L2+level1_split+[int(1),added,deleted,MC_only])
 
 icd10_raw.close()
 
+#merge disease3 into disease4, identifying unique disease4 diseases
+for i in disease3:
+    isin = False     
+    for idx in [i[3]+'.'+str(inner) for inner in range(0,10)]:
+        f=findItem(disease4,idx)
+        if len(f) == 1:
+            disease4[f[0][0]] += [i[3],i[4]]
+            isin=True
+    
+    #add level with no 4 codes at level 0 to ensure full coverage (about 400)
+    if isin==False:
+        print('Adding %s' % i[3])
+        disease4.append(i + [i[3],i[4]])
 
+#%%
 
 #merge with information from NCHS 113
 
@@ -418,7 +433,8 @@ for c in range(0,113):
     nchscod = nchsmap[c][0:2]
     nchscod.append(nchsmap[c][4])
     cod = nchsmap[c][3].split(r' ')
-    print("Merging nchs no. %s: %s \n\t%s disease class" % (nchscod[0],nchscod[1],nchscod[2]))
+    print("Merging nchs no. %s: %s \n\t%s disease class" 
+    % (nchscod[0],nchscod[1],nchscod[2]))
     time.sleep(.1)
 
     for i in cod:
